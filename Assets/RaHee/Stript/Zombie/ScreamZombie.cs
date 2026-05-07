@@ -5,59 +5,61 @@ using UnityEngine.AI;
 
 public class ScreamZombie : ZombieBase
 {
+    #region 설정 값
+    [Header("Scream")]
     [SerializeField] private float screamRange = 5f;
+    [SerializeField] private float screamDuration = 2.5f;
     [SerializeField] private ParticleSystem screamParticle;
 
-    private bool hasScreamed = false;
-    private bool isScreaming = false;
+    [Header("Attack")]
+    [SerializeField] private AnimationClip attackClip;
+    #endregion
 
-    protected override void HandleBehavior()
+    #region 상태 변수
+    private bool isScreaming = false;
+    private bool wasInRange = false;
+    #endregion
+
+    #region Update
+    protected override void Update()
     {
-        if (agent == null || player == null)
+        if (currentState == ZombieState.Dead || player == null)
             return;
 
         float distance = Vector3.Distance(transform.position, player.position);
 
-        // 1. 비명 중이면 끝날 때까지 유지
+        // 비명 중이면 모든 행동 차단
         if (isScreaming)
         {
             agent.isStopped = true;
-            agent.velocity = Vector3.zero;
-
-            AnimatorStateInfo state = anim.GetCurrentAnimatorStateInfo(0);
-
-            if (state.IsName("Zombie_Scream") && state.normalizedTime >= 1f)
-            {
-                EndScream();
-            }
-
             return;
         }
 
-        // 2. 거리 벗어나면 다시 비명 가능
-        if (distance > screamRange)
-        {
-            hasScreamed = false;
-        }
+        // 5m 진입 시 1회 비명
+        bool isInRange = distance <= screamRange;
 
-        // 3. 처음 들어왔을 때만 비명
-        if (distance <= screamRange && !hasScreamed)
+        if (isInRange && !wasInRange)
         {
-            StartScream();
+            StartCoroutine(ScreamRoutine());
+            wasInRange = true;
             return;
         }
 
-        // 4. 기본 행동
-        base.HandleBehavior();
+        if (!isInRange)
+        {
+            wasInRange = false;
+        }
+
+        base.Update();
     }
+    #endregion
 
-    private void StartScream()
+    #region 비명
+    private IEnumerator ScreamRoutine()
     {
-        hasScreamed = true;
         isScreaming = true;
 
         agent.isStopped = true;
-        agent.velocity = Vector3.zero;
         agent.ResetPath();
 
         if (anim != null)
@@ -65,18 +67,16 @@ public class ScreamZombie : ZombieBase
 
         if (screamParticle != null)
             screamParticle.Play();
-    }
 
-    private void EndScream()
-    {
-        isScreaming = false;
-
-        agent.isStopped = false;
-
-        agent.SetDestination(player.position);
+        yield return new WaitForSeconds(screamDuration);
 
         if (screamParticle != null)
             screamParticle.Stop();
+
+        isScreaming = false;
+
+        ChangeState(ZombieState.Chase);
     }
+    #endregion
 
 }

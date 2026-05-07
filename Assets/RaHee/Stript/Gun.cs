@@ -20,7 +20,7 @@ public class Gun : MonoBehaviour
 
     void Shoot()
     {
-        Debug.Log("Shoot 실행");
+        Debug.Log("데미지 들어감: " + damage);
 
         RaycastHit hit;
 
@@ -30,17 +30,17 @@ public class Gun : MonoBehaviour
         {
             Debug.Log("맞은 대상: " + hit.transform.name);
 
-            // 좀비 맞았을 때
-            if (hit.transform.CompareTag("Enemy"))
+            ZombieBase zombie = hit.transform.GetComponentInParent<ZombieBase>();
+
+            if (zombie != null)
             {
                 Debug.Log("좀비 맞음!");
+                zombie.TakeDamage(damage);
             }
-
             else
             {
-                Debug.Log("아무것도 안 맞음");
+                Debug.Log("좀비 아님");
             }
-
         }
     }
 }
